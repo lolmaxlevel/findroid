@@ -169,8 +169,9 @@ class MPVPlayer(
         // Cache
         mpvLib.setOptionString("cache", "yes")
         mpvLib.setOptionString("cache-pause-initial", "yes")
-        mpvLib.setOptionString("demuxer-max-bytes", "64MiB")
-        mpvLib.setOptionString("demuxer-max-back-bytes", "32MiB")
+        mpvLib.setOptionString("demuxer-max-bytes", "256MiB")
+        mpvLib.setOptionString("demuxer-max-back-bytes", "64MiB")
+        mpvLib.setOptionString("demuxer-readahead-secs", "30")
 
         // Subs
         mpvLib.setOptionString("sub-scale-with-window", "yes")
@@ -431,12 +432,7 @@ class MPVPlayer(
     override fun eventProperty(property: String, value: Double) {
         handler.post {
             when (property) {
-                "speed" -> {
-                    playbackParameters = playbackParameters.withSpeed(value.toFloat())
-                    listeners.sendEvent(EVENT_PLAYBACK_PARAMETERS_CHANGED) { listener ->
-                        listener.onPlaybackParametersChanged(playbackParameters)
-                    }
-                }
+                "speed" -> updatePlaybackSpeed(value.toFloat())
             }
         }
     }
@@ -1072,8 +1068,16 @@ class MPVPlayer(
      * @param playbackParameters The playback parameters.
      */
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
-        if (getPlaybackParameters().speed != playbackParameters.speed) {
-            mpvLib.setPropertyDouble("speed", playbackParameters.speed.toDouble())
+        val previousSpeed = getPlaybackParameters().speed
+        val newSpeed = playbackParameters.speed
+
+        if (previousSpeed != newSpeed) {
+            mpvLib.setPropertyDouble("speed", newSpeed.toDouble())
+            updatePlaybackSpeed(newSpeed)
+
+            if (previousSpeed > FAST_PLAYBACK_THRESHOLD && newSpeed < previousSpeed) {
+                recoverFromFastPlayback()
+            }
         }
     }
 
@@ -1084,6 +1088,23 @@ class MPVPlayer(
      */
     override fun getPlaybackParameters(): PlaybackParameters {
         return playbackParameters
+    }
+
+    private fun updatePlaybackSpeed(speed: Float) {
+        if (playbackParameters.speed == speed) return
+
+        playbackParameters = playbackParameters.withSpeed(speed)
+        listeners.sendEvent(EVENT_PLAYBACK_PARAMETERS_CHANGED) { listener ->
+            listener.onPlaybackParametersChanged(playbackParameters)
+        }
+    }
+
+    private fun recoverFromFastPlayback() {
+        try {
+            mpvLib.command(arrayOf("drop-buffers"))
+        } catch (e: RuntimeException) {
+            Timber.d(e, "Failed to drop mpv buffers after fast playback")
+        }
     }
 
     override fun stop() {
@@ -1551,6 +1572,7 @@ class MPVPlayer(
     companion object {
         /** Fraction to which audio volume is ducked on loss of audio focus */
         private const val AUDIO_FOCUS_DUCKING = 0.5f
+        private const val FAST_PLAYBACK_THRESHOLD = 1.01f
 
         private val permanentAvailableCommands: Commands =
             Commands.Builder()
