@@ -341,6 +341,8 @@ class MPVPlayer(
     private var fastPlaybackStartedAtMs: Long? = null
     private var framedropBeforeFastPlayback: String? = null
     private var decoderFramedropBeforeFastPlayback: String? = null
+    private var decoderSkipFrameBeforeFastPlayback: String? = null
+    private var decoderSkipLoopFilterBeforeFastPlayback: String? = null
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -1158,16 +1160,31 @@ class MPVPlayer(
             fastPlaybackStartedAtMs = System.currentTimeMillis()
             framedropBeforeFastPlayback = mpvLib.getPropertyString("framedrop")
             decoderFramedropBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-framedrop")
+            decoderSkipFrameBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-skipframe")
+            decoderSkipLoopFilterBeforeFastPlayback =
+                mpvLib.getPropertyString("vd-lavc-skiploopfilter")
             mpvLib.setOptionString("framedrop", "decoder+vo")
             mpvLib.setOptionString("vd-lavc-framedrop", "nonref")
+            mpvLib.setOptionString("vd-lavc-skipframe", "nonref")
+            mpvLib.setOptionString("vd-lavc-skiploopfilter", "nonref")
         } else {
             mpvLib.setOptionString("framedrop", framedropBeforeFastPlayback ?: "vo")
             mpvLib.setOptionString(
                 "vd-lavc-framedrop",
                 decoderFramedropBeforeFastPlayback ?: "default",
             )
+            mpvLib.setOptionString(
+                "vd-lavc-skipframe",
+                decoderSkipFrameBeforeFastPlayback ?: "default",
+            )
+            mpvLib.setOptionString(
+                "vd-lavc-skiploopfilter",
+                decoderSkipLoopFilterBeforeFastPlayback ?: "default",
+            )
             framedropBeforeFastPlayback = null
             decoderFramedropBeforeFastPlayback = null
+            decoderSkipFrameBeforeFastPlayback = null
+            decoderSkipLoopFilterBeforeFastPlayback = null
         }
     }
 
