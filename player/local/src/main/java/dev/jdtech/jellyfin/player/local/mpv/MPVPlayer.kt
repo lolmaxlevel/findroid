@@ -171,15 +171,15 @@ class MPVPlayer(
 
         // Cache
         mpvLib.setOptionString("cache", "yes")
-        mpvLib.setOptionString("cache-secs", "120")
+        mpvLib.setOptionString("cache-secs", "180")
         mpvLib.setOptionString("cache-pause", "yes")
         mpvLib.setOptionString("cache-pause-initial", "yes")
-        mpvLib.setOptionString("cache-pause-wait", "8")
-        mpvLib.setOptionString("demuxer-max-bytes", "512MiB")
+        mpvLib.setOptionString("cache-pause-wait", "10")
+        mpvLib.setOptionString("demuxer-max-bytes", "768MiB")
         mpvLib.setOptionString("demuxer-max-back-bytes", "128MiB")
-        mpvLib.setOptionString("demuxer-readahead-secs", "120")
+        mpvLib.setOptionString("demuxer-readahead-secs", "180")
         mpvLib.setOptionString("demuxer-hysteresis-secs", "10")
-        mpvLib.setOptionString("stream-buffer-size", "4MiB")
+        mpvLib.setOptionString("stream-buffer-size", "8MiB")
 
         // Subs
         mpvLib.setOptionString("sub-scale-with-window", "yes")
@@ -337,6 +337,7 @@ class MPVPlayer(
     private var audioPitchCorrectionBeforeFastPlayback: Boolean? = null
     private var framedropBeforeFastPlayback: String? = null
     private var decoderFramedropBeforeFastPlayback: String? = null
+    private var audioTrackBeforeFastPlayback: String? = null
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -1123,9 +1124,11 @@ class MPVPlayer(
             fastPlaybackStartedAtMs = System.currentTimeMillis()
             audioPitchCorrectionBeforeFastPlayback =
                 mpvLib.getPropertyBoolean("audio-pitch-correction")
+            audioTrackBeforeFastPlayback = mpvLib.getPropertyString("aid")
             framedropBeforeFastPlayback = mpvLib.getPropertyString("framedrop")
             decoderFramedropBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-framedrop")
             mpvLib.setOptionString("audio-pitch-correction", "no")
+            mpvLib.setPropertyString("aid", "no")
             mpvLib.setOptionString("framedrop", "decoder+vo")
             mpvLib.setOptionString("vd-lavc-framedrop", "nonref")
         } else {
@@ -1139,7 +1142,9 @@ class MPVPlayer(
                 "vd-lavc-framedrop",
                 decoderFramedropBeforeFastPlayback ?: "default",
             )
+            mpvLib.setPropertyString("aid", audioTrackBeforeFastPlayback ?: "auto")
             audioPitchCorrectionBeforeFastPlayback = null
+            audioTrackBeforeFastPlayback = null
             framedropBeforeFastPlayback = null
             decoderFramedropBeforeFastPlayback = null
         }
