@@ -158,6 +158,8 @@ class MPVPlayer(
         mpvLib.setOptionString("ao", audioOutput)
         mpvLib.setOptionString("gpu-context", "android")
         mpvLib.setOptionString("opengl-es", "yes")
+        mpvLib.setOptionString("swapchain-depth", "4")
+        mpvLib.setOptionString("autosync", "30")
 
         // Hardware video decoding
         mpvLib.setOptionString("hwdec", hwDec)
@@ -178,7 +180,7 @@ class MPVPlayer(
         mpvLib.setOptionString("demuxer-max-bytes", "768MiB")
         mpvLib.setOptionString("demuxer-max-back-bytes", "128MiB")
         mpvLib.setOptionString("demuxer-readahead-secs", "180")
-        mpvLib.setOptionString("demuxer-hysteresis-secs", "10")
+        mpvLib.setOptionString("demuxer-hysteresis-secs", "0")
         mpvLib.setOptionString("stream-buffer-size", "8MiB")
 
         // Subs
@@ -334,10 +336,8 @@ class MPVPlayer(
     private var oldMediaItem: MediaItem? = null
     private var isFastPlaybackModeEnabled: Boolean = false
     private var fastPlaybackStartedAtMs: Long? = null
-    private var audioPitchCorrectionBeforeFastPlayback: Boolean? = null
     private var framedropBeforeFastPlayback: String? = null
     private var decoderFramedropBeforeFastPlayback: String? = null
-    private var audioTrackBeforeFastPlayback: String? = null
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -1122,29 +1122,16 @@ class MPVPlayer(
         isFastPlaybackModeEnabled = enableFastPlaybackMode
         if (enableFastPlaybackMode) {
             fastPlaybackStartedAtMs = System.currentTimeMillis()
-            audioPitchCorrectionBeforeFastPlayback =
-                mpvLib.getPropertyBoolean("audio-pitch-correction")
-            audioTrackBeforeFastPlayback = mpvLib.getPropertyString("aid")
             framedropBeforeFastPlayback = mpvLib.getPropertyString("framedrop")
             decoderFramedropBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-framedrop")
-            mpvLib.setOptionString("audio-pitch-correction", "no")
-            mpvLib.setPropertyString("aid", "no")
             mpvLib.setOptionString("framedrop", "decoder+vo")
             mpvLib.setOptionString("vd-lavc-framedrop", "nonref")
         } else {
-            val previousAudioPitchCorrection = audioPitchCorrectionBeforeFastPlayback ?: true
-            mpvLib.setOptionString(
-                "audio-pitch-correction",
-                if (previousAudioPitchCorrection) "yes" else "no",
-            )
             mpvLib.setOptionString("framedrop", framedropBeforeFastPlayback ?: "vo")
             mpvLib.setOptionString(
                 "vd-lavc-framedrop",
                 decoderFramedropBeforeFastPlayback ?: "default",
             )
-            mpvLib.setPropertyString("aid", audioTrackBeforeFastPlayback ?: "auto")
-            audioPitchCorrectionBeforeFastPlayback = null
-            audioTrackBeforeFastPlayback = null
             framedropBeforeFastPlayback = null
             decoderFramedropBeforeFastPlayback = null
         }
