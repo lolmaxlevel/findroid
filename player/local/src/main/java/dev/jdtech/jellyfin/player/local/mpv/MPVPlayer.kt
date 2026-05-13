@@ -324,6 +324,9 @@ class MPVPlayer(
     private var initialIndex: Int = 0
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
+    private var isFastPlaybackModeEnabled: Boolean = false
+    private var fastPlaybackStartedAtMs: Long? = null
+    private var audioPitchCorrectionBeforeFastPlayback: Boolean? = null
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -1072,6 +1075,7 @@ class MPVPlayer(
         val newSpeed = playbackParameters.speed
 
         if (previousSpeed != newSpeed) {
+            configureFastPlayback(newSpeed)
             mpvLib.setPropertyDouble("speed", newSpeed.toDouble())
             updatePlaybackSpeed(newSpeed)
 
@@ -1099,11 +1103,39 @@ class MPVPlayer(
         }
     }
 
+    private fun configureFastPlayback(speed: Float) {
+        val enableFastPlaybackMode = speed >= FAST_PLAYBACK_THRESHOLD
+
+        if (isFastPlaybackModeEnabled == enableFastPlaybackMode) return
+
+        isFastPlaybackModeEnabled = enableFastPlaybackMode
+        if (enableFastPlaybackMode) {
+            fastPlaybackStartedAtMs = System.currentTimeMillis()
+            audioPitchCorrectionBeforeFastPlayback =
+                mpvLib.getPropertyBoolean("audio-pitch-correction")
+            mpvLib.setOptionString("audio-pitch-correction", "no")
+        } else {
+            val previousAudioPitchCorrection = audioPitchCorrectionBeforeFastPlayback ?: true
+            mpvLib.setOptionString(
+                "audio-pitch-correction",
+                if (previousAudioPitchCorrection) "yes" else "no",
+            )
+            audioPitchCorrectionBeforeFastPlayback = null
+        }
+    }
+
     private fun recoverFromFastPlayback() {
+        val fastPlaybackDurationMs =
+            fastPlaybackStartedAtMs?.let { System.currentTimeMillis() - it } ?: 0L
+        fastPlaybackStartedAtMs = null
+        if (fastPlaybackDurationMs < FAST_PLAYBACK_RECOVERY_MIN_MS) return
+
+        val currentPositionSeconds =
+            currentPositionMs?.toDouble()?.div(C.MILLIS_PER_SECOND) ?: return
         try {
-            mpvLib.command(arrayOf("drop-buffers"))
+            mpvLib.command(arrayOf("seek", "$currentPositionSeconds", "absolute+exact"))
         } catch (e: RuntimeException) {
-            Timber.d(e, "Failed to drop mpv buffers after fast playback")
+            Timber.d(e, "Failed to refresh mpv decoder after fast playback")
         }
     }
 
@@ -1572,7 +1604,8 @@ class MPVPlayer(
     companion object {
         /** Fraction to which audio volume is ducked on loss of audio focus */
         private const val AUDIO_FOCUS_DUCKING = 0.5f
-        private const val FAST_PLAYBACK_THRESHOLD = 1.01f
+        private const val FAST_PLAYBACK_THRESHOLD = 1.5f
+        private const val FAST_PLAYBACK_RECOVERY_MIN_MS = 1_500L
 
         private val permanentAvailableCommands: Commands =
             Commands.Builder()
