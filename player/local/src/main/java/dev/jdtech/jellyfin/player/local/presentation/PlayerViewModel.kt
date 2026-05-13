@@ -123,7 +123,7 @@ constructor(
         trackSelector.setParameters(
             trackSelector
                 .buildUponParameters()
-                .setTunnelingEnabled(true)
+                .setTunnelingEnabled(false)
                 .setPreferredAudioLanguage(
                     appPreferences.getValue(appPreferences.preferredAudioLanguage)
                 )
@@ -152,6 +152,7 @@ constructor(
             val renderersFactory =
                 DefaultRenderersFactory(application)
                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                    .setEnableDecoderFallback(true)
             player =
                 ExoPlayer.Builder(application, renderersFactory)
                     .setAudioAttributes(audioAttributes, true)
