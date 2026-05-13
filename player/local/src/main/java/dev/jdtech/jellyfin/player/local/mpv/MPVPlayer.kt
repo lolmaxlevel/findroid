@@ -173,13 +173,15 @@ class MPVPlayer(
 
         // Cache
         mpvLib.setOptionString("cache", "yes")
-        mpvLib.setOptionString("cache-secs", "180")
+        mpvLib.setOptionString("cache-on-disk", "yes")
+        mpvLib.setOptionString("demuxer-cache-dir", cacheDir.path)
+        mpvLib.setOptionString("cache-secs", "600")
         mpvLib.setOptionString("cache-pause", "yes")
         mpvLib.setOptionString("cache-pause-initial", "yes")
-        mpvLib.setOptionString("cache-pause-wait", "10")
-        mpvLib.setOptionString("demuxer-max-bytes", "768MiB")
-        mpvLib.setOptionString("demuxer-max-back-bytes", "128MiB")
-        mpvLib.setOptionString("demuxer-readahead-secs", "180")
+        mpvLib.setOptionString("cache-pause-wait", "45")
+        mpvLib.setOptionString("demuxer-max-bytes", "512MiB")
+        mpvLib.setOptionString("demuxer-max-back-bytes", "256MiB")
+        mpvLib.setOptionString("demuxer-readahead-secs", "600")
         mpvLib.setOptionString("demuxer-hysteresis-secs", "0")
         mpvLib.setOptionString("stream-buffer-size", "8MiB")
 
