@@ -1142,6 +1142,14 @@ class MPVPlayer(
         }
     }
 
+    fun usesEmbeddedMediaCodecOutput(): Boolean {
+        return resolvedVideoOutput == MPV_VO_MEDIACODEC_EMBED
+    }
+
+    fun getCurrentSubtitleText(): String {
+        return mpvLib.getPropertyString("sub-text").orEmpty()
+    }
+
     private fun updatePlaybackSpeed(speed: Float) {
         if (playbackParameters.speed == speed) return
 

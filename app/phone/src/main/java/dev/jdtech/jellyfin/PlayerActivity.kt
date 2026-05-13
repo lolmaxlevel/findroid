@@ -254,6 +254,19 @@ class PlayerActivity : BasePlayerActivity() {
                     }
                 }
 
+                launch {
+                    val mpvPlayer = viewModel.player as? MPVPlayer
+                    val renderSubtitlesInAndroid =
+                        mpvPlayer?.usesEmbeddedMediaCodecOutput() == true
+                    binding.mpvSurfaceSubtitle.isVisible = false
+                    while (renderSubtitlesInAndroid) {
+                        val subtitleText = mpvPlayer?.getCurrentSubtitleText().orEmpty()
+                        binding.mpvSurfaceSubtitle.text = subtitleText
+                        binding.mpvSurfaceSubtitle.isVisible = subtitleText.isNotBlank()
+                        delay(100L)
+                    }
+                }
+
                 if (
                     appPreferences.getValue(appPreferences.playerMediaSegmentsSkipButton) ||
                         appPreferences.getValue(appPreferences.playerMediaSegmentsAutoSkip)
