@@ -35,6 +35,7 @@ import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import dagger.hilt.android.AndroidEntryPoint
 import dev.jdtech.jellyfin.databinding.ActivityPlayerBinding
+import dev.jdtech.jellyfin.player.local.mpv.MPVPlayer
 import dev.jdtech.jellyfin.player.local.presentation.PlayerEvents
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
 import dev.jdtech.jellyfin.presentation.player.SpeedSelectionDialogFragment
@@ -241,6 +242,15 @@ class PlayerActivity : BasePlayerActivity() {
                     while (true) {
                         viewModel.updatePlaybackProgress()
                         delay(5000L)
+                    }
+                }
+
+                launch {
+                    val mpvPlayer = viewModel.player as? MPVPlayer
+                    binding.mpvDebugOverlay.isVisible = BuildConfig.DEBUG && mpvPlayer != null
+                    while (BuildConfig.DEBUG && mpvPlayer != null) {
+                        binding.mpvDebugOverlay.text = mpvPlayer.getDebugOverlayText()
+                        delay(1000L)
                     }
                 }
 

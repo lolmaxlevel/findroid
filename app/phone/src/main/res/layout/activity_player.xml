@@ -159,6 +159,25 @@
             tools:ignore="ContentDescription" />
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/mpv_debug_overlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="12dp"
+        android:background="@drawable/overlay_background"
+        android:clickable="false"
+        android:fontFamily="monospace"
+        android:includeFontPadding="false"
+        android:lineSpacingExtra="2dp"
+        android:maxWidth="360dp"
+        android:padding="8dp"
+        android:textColor="@android:color/white"
+        android:textSize="11sp"
+        android:visibility="gone"
+        tools:text="mpv debug"
+        tools:visibility="visible" />
+
     <ImageView
         android:id="@+id/image_ffwd_animation_ripple"
         android:layout_width="50dp"

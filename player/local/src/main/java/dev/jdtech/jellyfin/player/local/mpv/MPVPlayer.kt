@@ -39,6 +39,7 @@ import dev.jdtech.mpv.MPVLib.MpvFormat
 import dev.jdtech.mpv.MPVLib.MpvEvent
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import java.util.concurrent.CopyOnWriteArraySet
 import org.json.JSONArray
 import org.json.JSONException
@@ -1107,6 +1108,37 @@ class MPVPlayer(
         return playbackParameters
     }
 
+    fun getDebugOverlayText(): String {
+        val positionSeconds = currentPositionMs?.div(C.MILLIS_PER_SECOND) ?: 0L
+        val bufferedPositionSeconds =
+            currentCacheDurationMs?.div(C.MILLIS_PER_SECOND) ?: positionSeconds
+        val bufferedAheadSeconds = (bufferedPositionSeconds - positionSeconds).coerceAtLeast(0L)
+        val demuxerCacheDuration = mpvLib.getPropertyDouble("demuxer-cache-duration")
+        val cacheSpeed = mpvLib.getPropertyInt("cache-speed")
+        val pausedForCache = mpvLib.getPropertyBoolean("paused-for-cache")
+        val demuxerCacheIdle = mpvLib.getPropertyBoolean("demuxer-cache-idle")
+        val cacheBufferingState = mpvLib.getPropertyInt("cache-buffering-state")
+        val frameDrops = mpvLib.getPropertyInt("frame-drop-count")
+        val decoderFrameDrops = mpvLib.getPropertyInt("decoder-frame-drop-count")
+        val mistimedFrames = mpvLib.getPropertyInt("mistimed-frame-count")
+        val delayedFrames = mpvLib.getPropertyInt("vo-delayed-frame-count")
+        val videoCodec = mpvLib.getPropertyString("video-codec") ?: "?"
+        val audioCodec = mpvLib.getPropertyString("audio-codec-name") ?: "?"
+        val hwdecCurrent = mpvLib.getPropertyString("hwdec-current") ?: "?"
+        val videoFormat = mpvLib.getPropertyString("video-format") ?: "?"
+
+        return buildString {
+            appendLine("mpv ${String.format(Locale.US, "%.2fx", playbackParameters.speed)}")
+            appendLine("pos=${formatDuration(positionSeconds)} buf=${formatDuration(bufferedAheadSeconds)} ahead")
+            appendLine("demux=${demuxerCacheDuration.formatSeconds()} speed=${cacheSpeed.formatBytesPerSecond()}")
+            appendLine("cache pause=$pausedForCache idle=$demuxerCacheIdle fill=${cacheBufferingState ?: "?"}%")
+            appendLine("drop vo=${frameDrops ?: "?"} dec=${decoderFrameDrops ?: "?"}")
+            appendLine("late=${mistimedFrames ?: "?"} delayed=${delayedFrames ?: "?"}")
+            appendLine("v=$videoCodec $videoFormat")
+            appendLine("hw=$hwdecCurrent a=$audioCodec")
+        }
+    }
+
     private fun updatePlaybackSpeed(speed: Float) {
         if (playbackParameters.speed == speed) return
 
@@ -1621,6 +1653,28 @@ class MPVPlayer(
         private const val AUDIO_FOCUS_DUCKING = 0.5f
         private const val FAST_PLAYBACK_THRESHOLD = 1.5f
         private const val FAST_PLAYBACK_RECOVERY_MIN_MS = 1_500L
+
+        private fun formatDuration(totalSeconds: Long): String {
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds / 60) % 60
+            val seconds = totalSeconds % 60
+            return if (hours > 0) {
+                String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format(Locale.US, "%d:%02d", minutes, seconds)
+            }
+        }
+
+        private fun Double?.formatSeconds(): String {
+            return if (this == null) "?" else String.format(Locale.US, "%.1fs", this)
+        }
+
+        private fun Int?.formatBytesPerSecond(): String {
+            if (this == null) return "?"
+            val bytes = toDouble()
+            val mib = bytes / 1024.0 / 1024.0
+            return String.format(Locale.US, "%.1fMiB/s", mib)
+        }
 
         private val permanentAvailableCommands: Commands =
             Commands.Builder()
