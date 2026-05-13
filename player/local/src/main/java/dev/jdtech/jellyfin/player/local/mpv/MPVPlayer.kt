@@ -162,6 +162,9 @@ class MPVPlayer(
         // Hardware video decoding
         mpvLib.setOptionString("hwdec", hwDec)
         mpvLib.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
+        mpvLib.setOptionString("hwdec-extra-frames", "32")
+        mpvLib.setOptionString("hwdec-threads", "0")
+        mpvLib.setOptionString("vd-lavc-dr", "yes")
 
         // TLS
         mpvLib.setOptionString("tls-verify", "no")
@@ -327,6 +330,8 @@ class MPVPlayer(
     private var isFastPlaybackModeEnabled: Boolean = false
     private var fastPlaybackStartedAtMs: Long? = null
     private var audioPitchCorrectionBeforeFastPlayback: Boolean? = null
+    private var framedropBeforeFastPlayback: String? = null
+    private var decoderFramedropBeforeFastPlayback: String? = null
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -1113,14 +1118,25 @@ class MPVPlayer(
             fastPlaybackStartedAtMs = System.currentTimeMillis()
             audioPitchCorrectionBeforeFastPlayback =
                 mpvLib.getPropertyBoolean("audio-pitch-correction")
+            framedropBeforeFastPlayback = mpvLib.getPropertyString("framedrop")
+            decoderFramedropBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-framedrop")
             mpvLib.setOptionString("audio-pitch-correction", "no")
+            mpvLib.setOptionString("framedrop", "decoder+vo")
+            mpvLib.setOptionString("vd-lavc-framedrop", "nonref")
         } else {
             val previousAudioPitchCorrection = audioPitchCorrectionBeforeFastPlayback ?: true
             mpvLib.setOptionString(
                 "audio-pitch-correction",
                 if (previousAudioPitchCorrection) "yes" else "no",
             )
+            mpvLib.setOptionString("framedrop", framedropBeforeFastPlayback ?: "vo")
+            mpvLib.setOptionString(
+                "vd-lavc-framedrop",
+                decoderFramedropBeforeFastPlayback ?: "default",
+            )
             audioPitchCorrectionBeforeFastPlayback = null
+            framedropBeforeFastPlayback = null
+            decoderFramedropBeforeFastPlayback = null
         }
     }
 
