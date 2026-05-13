@@ -18,6 +18,7 @@
     <string-array name="mpv_vos">
         <item>gpu</item>
         <item>gpu-next</item>
+        <item>mediacodec_embed</item>
     </string-array>
     <string-array name="mpv_aos">
         <item>audiotrack</item>

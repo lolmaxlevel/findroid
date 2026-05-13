@@ -65,6 +65,9 @@ class MPVPlayer(
     private var audioFocusCallback: () -> Unit = {}
     private lateinit var audioFocusRequest: AudioFocusRequestCompat
     private val handler: Handler = Handler(context.mainLooper)
+    private val resolvedVideoOutput = videoOutput
+    private val resolvedHwDec =
+        if (resolvedVideoOutput == MPV_VO_MEDIACODEC_EMBED) MPV_HWDEC_MEDIACODEC else hwDec
 
     private constructor(
         builder: Builder
@@ -155,7 +158,7 @@ class MPVPlayer(
         for (opt in arrayOf("gpu-shader-cache-dir", "icc-cache-dir"))
             mpvLib.setOptionString(opt, cacheDir.path)
         mpvLib.setOptionString("profile", "fast")
-        mpvLib.setOptionString("vo", videoOutput)
+        mpvLib.setOptionString("vo", resolvedVideoOutput)
         mpvLib.setOptionString("ao", audioOutput)
         mpvLib.setOptionString("gpu-context", "android")
         mpvLib.setOptionString("opengl-es", "yes")
@@ -163,7 +166,7 @@ class MPVPlayer(
         mpvLib.setOptionString("autosync", "30")
 
         // Hardware video decoding
-        mpvLib.setOptionString("hwdec", hwDec)
+        mpvLib.setOptionString("hwdec", resolvedHwDec)
         mpvLib.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
         mpvLib.setOptionString("hwdec-extra-frames", "32")
         mpvLib.setOptionString("hwdec-threads", "0")
@@ -341,8 +344,6 @@ class MPVPlayer(
     private var fastPlaybackStartedAtMs: Long? = null
     private var framedropBeforeFastPlayback: String? = null
     private var decoderFramedropBeforeFastPlayback: String? = null
-    private var decoderSkipFrameBeforeFastPlayback: String? = null
-    private var decoderSkipLoopFilterBeforeFastPlayback: String? = null
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -1160,31 +1161,16 @@ class MPVPlayer(
             fastPlaybackStartedAtMs = System.currentTimeMillis()
             framedropBeforeFastPlayback = mpvLib.getPropertyString("framedrop")
             decoderFramedropBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-framedrop")
-            decoderSkipFrameBeforeFastPlayback = mpvLib.getPropertyString("vd-lavc-skipframe")
-            decoderSkipLoopFilterBeforeFastPlayback =
-                mpvLib.getPropertyString("vd-lavc-skiploopfilter")
             mpvLib.setOptionString("framedrop", "decoder+vo")
             mpvLib.setOptionString("vd-lavc-framedrop", "nonref")
-            mpvLib.setOptionString("vd-lavc-skipframe", "nonref")
-            mpvLib.setOptionString("vd-lavc-skiploopfilter", "nonref")
         } else {
             mpvLib.setOptionString("framedrop", framedropBeforeFastPlayback ?: "vo")
             mpvLib.setOptionString(
                 "vd-lavc-framedrop",
                 decoderFramedropBeforeFastPlayback ?: "default",
             )
-            mpvLib.setOptionString(
-                "vd-lavc-skipframe",
-                decoderSkipFrameBeforeFastPlayback ?: "default",
-            )
-            mpvLib.setOptionString(
-                "vd-lavc-skiploopfilter",
-                decoderSkipLoopFilterBeforeFastPlayback ?: "default",
-            )
             framedropBeforeFastPlayback = null
             decoderFramedropBeforeFastPlayback = null
-            decoderSkipFrameBeforeFastPlayback = null
-            decoderSkipLoopFilterBeforeFastPlayback = null
         }
     }
 
@@ -1628,7 +1614,7 @@ class MPVPlayer(
             override fun surfaceCreated(holder: SurfaceHolder) {
                 mpvLib.attachSurface(holder.surface)
                 mpvLib.setOptionString("force-window", "yes")
-                mpvLib.setOptionString("vo", videoOutput)
+                mpvLib.setOptionString("vo", resolvedVideoOutput)
             }
 
             /**
@@ -1670,6 +1656,8 @@ class MPVPlayer(
         private const val AUDIO_FOCUS_DUCKING = 0.5f
         private const val FAST_PLAYBACK_THRESHOLD = 1.5f
         private const val FAST_PLAYBACK_RECOVERY_MIN_MS = 1_500L
+        private const val MPV_VO_MEDIACODEC_EMBED = "mediacodec_embed"
+        private const val MPV_HWDEC_MEDIACODEC = "mediacodec"
 
         private fun formatDuration(totalSeconds: Long): String {
             val hours = totalSeconds / 3600
